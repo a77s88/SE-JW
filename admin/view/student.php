@@ -11,10 +11,18 @@ if(!$_SESSION['isadmin']) {
 	die("You are not admin.");
 }
 
-if(isset($_GET['id'])){
-	$id = $_GET['id'];
-	if(!preg_match("/^\d+$/",$id)) {
+if(isset($_GET['id']) || isset($_GET['majorid'])){
+	if(isset($_GET['id']) && $_GET['id'] != ""){
+		$id = $_GET['id'];
+		if(!preg_match("/^\d+$/", $id)) {
 		die("wrong input");
+		}
+	}
+	if(isset($_GET['majorid']) && $_GET['majorid'] != "") {
+		$majorid = $_GET['majorid'];
+		if(!preg_match("/^\d+$/", $majorid)) {
+			die("wrong input");
+		}
 	}
 }
 
@@ -28,25 +36,38 @@ if (!$db_selected) {
 	die ("Could not select db : " . mysql_error());
 }
 
-$sql = "SELECT `user`.`id`, `user`.`username`, `user`.`realname`, `user`.`sex`, `major`.`name` FROM `user`, `major` WHERE `user`.`major`=`major`.`id`";
-if(isset($id)) {
-	$sql .= "AND `user`.`username` like \"%$id%\"";
-}
+// list all majors
+$sql = "SELECT * FROM `major`";
 $result = mysql_query($sql);
-$array = array();
+$majorselection = "";
 while($row=mysql_fetch_array($result, MYSQL_ASSOC)) {
-	$array[] = $row;
+	$majorselection .= "<option value=\"".$row['id']."\">";
+	$majorselection .= $row['name'];
+	$majorselection .= "</option>\n";
 }
 
-$tc = "<table><tr><td>账号</td><td>姓名</td><td>性别</td><td>专业</td><td>修改密码</td></tr>";
-foreach($array as $row) {
-	$tc .= "<tr><td>".$row['username']."</td>";
-	$tc .= "<td>".$row['realname']."</td>";
-	$tc .= "<td>".(($row['sex']==0)?"男":"女")."</td>";
-	$tc .= "<td>".$row["name"]."</td>";
-	$tc .= "<td><a href=\"changepassword.php?id=".$row["id"]."\">修改密码</a></td></tr>\n";
+$tc = "";
+if(isset($id) || isset($majorid)) {
+	$sql = "SELECT `user`.`id`, `user`.`username`, `user`.`realname`, `user`.`sex`, `major`.`name` FROM `user`, `major` WHERE `user`.`major`=`major`.`id`";
+	if(isset($id)) {
+		$sql .= " AND `user`.`username` like \"%$id%\"";
+	}
+	if(isset($majorid) && $majorid != 0) {
+		$sql .= " AND `major`.`id`=$majorid";
+	}
+
+	$result = mysql_query($sql);
+
+	$tc = "<table><tr><td>账号</td><td>姓名</td><td>性别</td><td>专业</td><td>修改资料</td></tr>";
+	while($row = mysql_fetch_array($result, MYSQL_ASSOC)) {
+		$tc .= "<tr><td>".$row['username']."</td>";
+		$tc .= "<td>".$row['realname']."</td>";
+		$tc .= "<td>".(($row['sex']==0)?"男":"女")."</td>";
+		$tc .= "<td>".$row["name"]."</td>";
+		$tc .= "<td><a href=\"changeuserinfo.php?id=".$row["id"]."\">修改</a></td></tr>\n";
+	}
+	$tc .= "</table>";
 }
-$tc .= "</table>";
 ?>
 <html>
 
@@ -54,7 +75,11 @@ $tc .= "</table>";
 <a href="../">返回</a><br />
 查看学生<br />
 <form>
-	学号<input type="text" name="id" />
+	学号<input type="text" name="id" /><br />
+	专业<select name="majorid">
+		<option value="0">请选择</option>
+		<?php echo $majorselection; ?>
+	</select><br />
 	<input type="submit" value="查找" />
 </form>
 <?php echo $tc; ?>
